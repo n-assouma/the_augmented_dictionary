@@ -1,4 +1,5 @@
 import anthropic
+import argparse
 import json
 import os
 
@@ -8,9 +9,6 @@ load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 MAX_TOKENS = 124
 TEMPERATURE = 0.1
-
-WORD = 'Quidditch'
-CONTEXT = 'Harry potter'
 
 system_prompt = (
     "You are a dictionary. Only define word sent by user using context if "
@@ -121,16 +119,37 @@ def display(response: dict) -> None:
         sep='\n'
     )
 
+def process_input() -> argparse.Namespace:
+    """
+    TODO
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'word',
+        help='Word to define',
+        type=str
+    )
+
+    parser.add_argument(
+        '-c', '--context',
+        help='Provide context to the word to define',
+        type=str,
+    )
+
+    args = parser.parse_args()
+    return args
+
+
 
 if __name__ == '__main__':
-    # Take input
+
+    args = process_input()
+
     # make API call
-    user_prompt = build_prompt(word=WORD, context=CONTEXT)
+    user_prompt = build_prompt(word=args.word, context=args.context)
     raw_message = make_request(user_prompt)
 
     # Parse output
     response = parse_output(raw_message)
     # display it
     display(response)
-    # exit 
-
