@@ -2,6 +2,7 @@ import anthropic
 import argparse
 import json
 import os
+import sys
 
 from dotenv import load_dotenv
 
@@ -57,8 +58,8 @@ def build_prompt(word: str, context: str | None = None) -> str:
     Build the prompt from the user input that is to be passed in API request
     """
 
-    prompt = 'Word:' + word
-    prompt += ',Context:' + context if context else '' # Add context if there is one
+    prompt = 'Word: ' + word
+    prompt += ', Context: ' + context if context else '' # Add context if there is one
 
     return prompt
 
@@ -104,7 +105,7 @@ def parse_output(message: anthropic.types.Message) -> dict:
             '\nStop reason status:',
             message.stop_reason
         ) 
-        exit(1)
+        sys.exit()
 
     return response
 
