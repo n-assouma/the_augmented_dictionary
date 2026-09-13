@@ -90,7 +90,8 @@ def build_prompt(word: str, context: str | None = None) -> str:
     """
 
     prompt = 'Word: ' + word
-    prompt += ', Context: ' + context if context else '' # Add context if there is one
+    # Add context if there is one
+    prompt += ', Context: ' + context if context else '' 
 
     return prompt
 
@@ -168,7 +169,6 @@ def display(response: dict) -> None:
     """
     TODO
     """
-
     print(
         f'{response['word']} ({response['part of speech']}):',
         response['definition'],
@@ -191,7 +191,6 @@ def process_input() -> argparse.Namespace:
         help='Provide context to the word to define (200 chars max)',
         type=str,
     )
-
     args = parser.parse_args()
 
     # Validation of input:
@@ -212,9 +211,21 @@ if __name__ == '__main__':
 
     # make API call
     user_prompt = build_prompt(word=args.word, context=args.context)
-    raw_message = make_request(user_prompt)
+    try:
+        raw_message = make_request(user_prompt)
+    except AnswerDeclinedError as e:
+        print(e)
+        sys.exit()
+    except UnexpectedAnswerError as e:
+        print(e)
+        sys.exit()
 
     # Parse output
-    response = parse_output(raw_message)
+    try:
+        response = parse_output(raw_message)
+    except OutputParsingError as e:
+        print(e)
+        sys.exit()
+        
     # display it
     display(response)
