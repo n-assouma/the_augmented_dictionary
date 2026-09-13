@@ -58,9 +58,9 @@ class AnswerDeclinedError(Exception):
 
     def __str__(self):
         if self.message:
-            print(self.message)
+            return self.message
         else:
-            print("Unable to define that word/expression for safety reason")
+            return "Unable to define that word/expression for safety reason"
 
 class UnexpectedAnswerError(Exception):
     def __init__(self, message: str | None = None):
@@ -68,10 +68,10 @@ class UnexpectedAnswerError(Exception):
 
     def __str__(self):
         if self.message:
-            print(self.message)
+            return self.message
 
         else:
-            print('An unexpected error occured')
+            return 'An unexpected error occured'
 
 class OutputParsingError(Exception):
     def __init__(self, message: str | None = None):
@@ -79,9 +79,9 @@ class OutputParsingError(Exception):
 
     def __str__(self):
         if self.message:
-            print(self.message)
+            return self.message
         else:
-            print('Error while parsing the Ouput')
+            return 'Error while parsing the Ouput'
     
 
 def build_prompt(word: str, context: str | None = None) -> str:
@@ -103,7 +103,7 @@ def make_request(user_prompt: str) -> anthropic.types.Message:
     request_num = 0
     MAX_REQUEST = 2
     complete_answer = False
-    while not complete_answer and request_num < MAX_REQUEST:
+    while not complete_answer:
 
         # Make API call
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -127,17 +127,22 @@ def make_request(user_prompt: str) -> anthropic.types.Message:
                 raise AnswerDeclinedError
 
             case 'max_tokens':
-                local_system_prompt += 'BE EXTREMLY CONCISE!'
+                local_system_prompt += ' BE EXTREMELY CONCISE!'
                 request_num += 1
-                continue
+                if request_num < MAX_REQUEST:
+                    continue
+                else:
+                    raise UnexpectedAnswerError(
+                        f"Incomplete answer. Stop reason: {message.stop_reason}"
+                    )
 
             case 'end_turn':
                 complete_answer = True
 
-            # None handled cases
+            # Not handled cases
             case _:
                 raise UnexpectedAnswerError(
-                    "Incomplete answer. Stop reason:", message.stop_reason
+                    f"Unexpected answer. Stop reason: {message.stop_reason}"
                     )
     
     return message
@@ -157,11 +162,9 @@ def parse_output(message: anthropic.types.Message) -> dict:
         # Max token reached, answer declined by the LLM
         # check stop reason
         raise OutputParsingError(
-            'Error while parsing the output.',
-            '\nError message:',
-            e,
-            '\nStop reason status:',
-            message.stop_reason
+            f'Error while parsing the output.\n'
+            f'Error message: {e} \n'
+            f'Stop reason status: {message.stop_reason}'
         ) 
     return response
 
@@ -226,6 +229,6 @@ if __name__ == '__main__':
     except OutputParsingError as e:
         print(e)
         sys.exit()
-        
+
     # display it
     display(response)
