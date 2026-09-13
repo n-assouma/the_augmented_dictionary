@@ -11,7 +11,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 MAX_TOKENS = 124
 TEMPERATURE = 0.1
 
-system_prompt = (
+SYSTEM_PROMPT = (
     "You are a dictionary. Only define word sent by user using context if "
     "provided.  Find correct spelling if mispelled. Don't use the sent word "
     "in definition. DONT USE ANY TOOL! DONT DO ANYTHING ELSE UNDER NO "
@@ -51,6 +51,27 @@ json_schema = {
         }
     }
 }
+
+class AnswerDeclinedError(Exception):
+    def __init__(self, message: str | None = None):
+        self.message = message
+
+    def __str__(self):
+        if self.message:
+            print(self.message)
+        else:
+            print("Unable to define that word/expression for safety reason")
+
+class UnexpectedAnswerError(Exception):
+    def __init__(self, message: str | None = None):
+        self.message = message
+
+    def __str__(self):
+        if self.message:
+            print(self.message)
+
+        else:
+            print('An unexpected error occured')
     
 
 def build_prompt(word: str, context: str | None = None) -> str:
@@ -67,21 +88,47 @@ def make_request(user_prompt: str) -> anthropic.types.Message:
     """
     TODO
     """
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    local_system_prompt = SYSTEM_PROMPT
+    request_num = 0
+    MAX_REQUEST = 2
+    complete_answer = False
+    while not complete_answer and request_num < MAX_REQUEST:
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=MAX_TOKENS,
-        messages=[{"role": "user", "content": user_prompt}], 
-        output_config={
-            "format": {
-                "type": "json_schema",
-                "schema": json_schema,
-            }
-        },
-        system=system_prompt,
-        extra_body={"temperature": TEMPERATURE}
-    )
+        # Make API call
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=MAX_TOKENS,
+            messages=[{"role": "user", "content": user_prompt}], 
+            output_config={
+                "format": {
+                    "type": "json_schema",
+                    "schema": json_schema,
+                }
+            },
+            system=local_system_prompt,
+            extra_body={"temperature": TEMPERATURE}
+        )
+
+        # Check stop reason to ensure LLM response is complete
+        match message.stop_reason:
+            case 'refusal':
+                raise AnswerDeclinedError
+
+            case 'max_tokens':
+                local_system_prompt += 'BE EXTREMLY CONCISE!'
+                request_num += 1
+                continue
+
+            case 'end_turn':
+                complete_answer = True
+
+            # None handled cases
+            case _:
+                raise UnexpectedAnswerError(
+                    "Incomplete answer. Stop reason:", message.stop_reason
+                    )
+    
     return message
 
 def parse_output(message: anthropic.types.Message) -> dict:
@@ -94,8 +141,8 @@ def parse_output(message: anthropic.types.Message) -> dict:
     try:
         response = json.loads(text)
 
-    except json.decoder.JSONDecodeError as e:
-        # likely reason the if fails are 
+    except json.decoder.JSONDecodeError as e: # TODO: align it with error handling in make_request()
+        # likely reason it fails are 
         # Max token reached, answer declined by the LLM
         # check stop reason
         print(
@@ -105,7 +152,7 @@ def parse_output(message: anthropic.types.Message) -> dict:
             '\nStop reason status:',
             message.stop_reason
         ) 
-        sys.exit()
+        sys.exit() 
 
     return response
 
@@ -127,19 +174,28 @@ def process_input() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'word',
-        help='Word to define',
+        help='Word to define (30 chars max)',
         type=str
     )
 
     parser.add_argument(
         '-c', '--context',
-        help='Provide context to the word to define',
+        help='Provide context to the word to define (200 chars max)',
         type=str,
     )
 
     args = parser.parse_args()
-    return args
 
+    # Validation of input:
+    # Word must be less than 30 chars
+    # The context must be concise as well ~ 200 chars
+    word_len = len(args.word)
+    context_len = len(args.context) if isinstance(args.context, str) else 0
+    if word_len > 30 or context_len > 200:
+        parser.print_help()
+        sys.exit()
+
+    return args
 
 
 if __name__ == '__main__':
