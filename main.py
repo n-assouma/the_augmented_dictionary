@@ -72,6 +72,16 @@ class UnexpectedAnswerError(Exception):
 
         else:
             print('An unexpected error occured')
+
+class OutputParsingError(Exception):
+    def __init__(self, message: str | None = None):
+        self.message = message
+
+    def __str__(self):
+        if self.message:
+            print(self.message)
+        else:
+            print('Error while parsing the Ouput')
     
 
 def build_prompt(word: str, context: str | None = None) -> str:
@@ -141,19 +151,17 @@ def parse_output(message: anthropic.types.Message) -> dict:
     try:
         response = json.loads(text)
 
-    except json.decoder.JSONDecodeError as e: # TODO: align it with error handling in make_request()
+    except json.decoder.JSONDecodeError as e: 
         # likely reason it fails are 
         # Max token reached, answer declined by the LLM
         # check stop reason
-        print(
+        raise OutputParsingError(
             'Error while parsing the output.',
             '\nError message:',
             e,
             '\nStop reason status:',
             message.stop_reason
         ) 
-        sys.exit() 
-
     return response
 
 def display(response: dict) -> None:
