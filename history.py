@@ -28,7 +28,7 @@ def load_history() -> list:
     # if path exist, load in memory
     history = []
     if path.exists():
-        with path.open(mode='r') as f:
+        with path.open(mode='r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
 
             for entry in reader:
@@ -36,7 +36,7 @@ def load_history() -> list:
 
     else:
         # create path
-        with path.open(mode='w') as f:
+        with path.open(mode='w', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow(FIELDS)
 
@@ -47,7 +47,7 @@ def _write_history(history: list) -> None:
     internal helper, overwrites history.csv with the given
     rows using csv.DictWriter
     """
-    with path.open(mode='w', newline='') as f:
+    with path.open(mode='w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(history)
