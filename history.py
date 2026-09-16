@@ -1,6 +1,6 @@
 import csv
 
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 
 # path to history database
@@ -53,7 +53,7 @@ def _write_history(history: list) -> None:
         writer.writerows(history)
 
 def save_search(word: str, part_of_speech: str, definition: str,
-                 context: str | None = None) -> None:
+                 context: str | None = None) -> int:
     """
     Records a fresh search in the history.
 
@@ -62,6 +62,10 @@ def save_search(word: str, part_of_speech: str, definition: str,
     combo, the one with the oldest date_searched is evicted before the
     new row is added. context is stored for display only, it plays no
     part in matching.
+
+    Returns the id of the newly created row, so callers (the Streamlit
+    UI's bookmark toggle) can act on that specific row without a
+    separate lookup.
     """
     history = load_history()
 
@@ -84,12 +88,14 @@ def save_search(word: str, part_of_speech: str, definition: str,
         'part_of_speech': part_of_speech,
         'definition': definition,
         'context': context or '',
-        'date_searched': date.today().isoformat(),
+        'date_searched': datetime.now().isoformat(timespec='seconds'),
         'bookmark': 'no',
         'id': str(next_id),
     })
 
     _write_history(history)
+
+    return next_id
 
 def touch_entry(entry_id: int) -> None:
     """
@@ -101,7 +107,7 @@ def touch_entry(entry_id: int) -> None:
 
     for entry in history:
         if int(entry['id']) == int(entry_id):
-            entry['date_searched'] = date.today().isoformat()
+            entry['date_searched'] = datetime.now().isoformat(timespec='seconds')
             break
 
     _write_history(history)
