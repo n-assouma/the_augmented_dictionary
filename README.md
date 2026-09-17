@@ -1,6 +1,6 @@
 # The Augmented Dictionary
 
-A dictionary app powered by Claude (Anthropic's LLM). Instead of a fixed set of definitions, you look up a word or expression and can optionally give it context (a sentence, a domain, a source like a specific book) so the definition actually fits how the word is being used. This is especially useful for things a classic dictionary struggles with, like phrasal verbs, slang, or British English idioms.
+An AI powered dictionary app. Instead of a fixed set of definitions, you look up a word or expression and can optionally give it context (a sentence, a domain, a source like a specific book) so the definition actually fits how the word is being used. This is especially useful for things a classic dictionary struggles with, like phrasal verbs, slang, or idioms.
 
 Each search is saved to a local history, which you can browse, restore, bookmark, or delete, so repeat lookups don't need a new API call.
 
